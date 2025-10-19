@@ -284,15 +284,12 @@
     function startGame(){
       score = 0; streak = 0; updateChips();
       order = [...RAW_LINES.keys()];
-      // 末尾の「最終回」扱いのため、そのまま
-      shuffle(); // 常に並び変える
-      if(elRandom.checked){
-        const startI = Math.max(0, Math.floor(Math.random()*(order.length-2)));
-        // startI を先頭に回す
-        const head = order.splice(startI, order.length-startI);
-        order = head.concat(order);
-      }
-      setCurrent(0);
+// ↓ この2行を削除またはコメントアウト
+// shuffle(); 
+// if (elRandom.checked) { ... }
+
+setCurrent(0);
+
       elLog.innerHTML = '';
       showToast('スタート');
     }
