@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>やみっこトラブルメーカー暗記ゲーム</title>
-  <meta name="description" content="やみっこトラブルメーカー系テキストの暗記ゲーム。次の行を当てろ！" />
+  <meta name="description" content="NOMALEND系テキストの暗記ゲーム。次の行を当てろ！" />
   <style>
     :root{
       --bg:#0b0b0f; --panel:#121218; --muted:#9aa3b2; --fg:#e8ecf1; --acc:#7aa2ff; --ok:#66d9a8; --bad:#ff6b88; --warn:#ffd166;
@@ -12,8 +12,9 @@
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Hiragino Kaku Gothic ProN, "BIZ UDPGothic", sans-serif;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:radial-gradient(1000px 600px at 80% -10%, #1a1a29 0%, #0b0b0f 60%, #0b0b0f 100%);color:var(--fg);font-family:var(--sans);}
+    html,body{height:100%;margin:0;padding:0;}
+    body{background:radial-gradient(1000px 600px at 80% -10%, #1a1a29 0%, #0b0b0f 60%, #0b0b0f 100%);color:var(--fg);font-family:var(--sans);overflow:hidden;}
+
     .wrap{max-width:960px;margin-inline:auto;padding:24px}
     header{display:flex;align-items:center;gap:16px;margin-bottom:12px}
     header h1{font-size:clamp(18px,4vw,28px);margin:0;font-weight:800;letter-spacing:0.01em}
@@ -25,9 +26,6 @@
     .card .body{padding:20px}
 
     .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-    .row > *{flex:1}
-    .row .col-fit{flex:0 0 auto}
-
     .panel{background:var(--panel);border:1px solid #1e2030;border-radius:12px;padding:14px}
 
     .prompt{font-family:var(--mono);font-size:clamp(14px,2.5vw,18px);line-height:1.6;word-break:break-word}
@@ -43,28 +41,23 @@
     .btn-acc:hover{background:#213066}
     .btn-ok{border-color:#2a6b57;background:#0f2a22}
     .btn-bad{border-color:#6b2a3d;background:#2a0f15}
-    .btn-ghost{background:transparent;border-color:#2a2d42}
 
     .score{display:flex;gap:12px;flex-wrap:wrap}
     .chip{font-family:var(--mono);background:#0f0f18;border:1px solid #2a2d42;border-radius:999px;padding:6px 10px}
 
-    .line-through{text-decoration:line-through;text-decoration-color:#ff8aa5}
-
-    details{user-select:none}
-    summary{cursor:pointer}
-
-    footer{margin-top:18px;color:var(--muted)}
-    a{color:#9db7ff}
-
     .toast{position:fixed;inset:auto 16px 16px auto;background:#12121a;border:1px solid #2a2d42;border-radius:10px;padding:10px 12px;box-shadow:0 10px 20px rgba(0,0,0,.4);opacity:0;transform:translateY(10px);transition:.25s}
     .toast.show{opacity:1;transform:translateY(0)}
+
+    .penalty{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,1);z-index:1000;}
+    .penalty.show{display:grid;}
+    .penalty img{width:100vw;height:100vh;object-fit:cover;}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <h1>やみっこトラブルメーカー暗記ゲーム</h1>
-      <span class="badge">やみっこトラブルメーカー - Memorize</span>
+      <span class="badge">NOMALEND - Memorize</span>
     </header>
 
     <div class="card">
@@ -77,7 +70,7 @@
         </div>
       </div>
       <div class="body">
-        <div class="row" style="align-items:flex-start">
+        <div class="row">
           <div class="panel" style="flex:2">
             <div class="muted small">現在の行</div>
             <div id="current" class="prompt" style="margin-top:6px">（スタートを押してね）</div>
@@ -89,26 +82,7 @@
               <button id="btnCheck" class="btn-acc">判定</button>
               <button id="btnReveal" class="btn-ghost">答えを見る</button>
               <button id="btnSkip" class="btn-ghost">スキップ</button>
-              <button id="btnShuffle" class="btn-ghost">シャッフル</button>
             </div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:14px">
-          <div class="panel" style="flex:2">
-            <label style="display:flex;gap:10px;align-items:center">
-              <input type="checkbox" id="safeMode" />
-              <span>セーフモード（強い言葉を伏せ字にする）</span>
-            </label>
-            <label style="display:flex;gap:10px;align-items:center;margin-top:8px">
-              <input type="checkbox" id="randomStart" checked />
-              <span>ランダム開始</span>
-            </label>
-            <div class="muted small" style="margin-top:6px">※ セーフモードは一部の語句を「＊＊」に置換します。</div>
-          </div>
-          <div class="panel" style="flex:3">
-            <div class="muted small">履歴</div>
-            <div id="log" class="small muted" style="margin-top:6px;max-height:120px;overflow:auto"></div>
           </div>
         </div>
 
@@ -116,210 +90,89 @@
           <button id="btnStart" class="btn-ok">スタート</button>
           <button id="btnReset" class="btn-bad">リセット</button>
         </div>
-
-        <details style="margin-top:12px">
-          <summary>遊び方</summary>
-          <ul class="small muted">
-            <li>左に表示された「現在の行」の <strong>次の一行</strong> を入力して <kbd>Enter</kbd> または「判定」。</li>
-            <li>正解で <span style="color:var(--ok)">スコア +1 / 連続正解 +1</span>。不正解で <span style="color:var(--bad)">連続正解リセット</span>。</li>
-            <li>「答えを見る」「スキップ」で先に進めます（スコアは増えません）。</li>
-            <li>「シャッフル」で出題順を再構成。「ランダム開始」で最初の行もランダムに。</li>
-          </ul>
-        </details>
       </div>
     </div>
-
-    <footer>
-      <p class="small">© Ponkan — やみっこトラブルメーカー暗記ゲーム。ローカルのみで動作し、データはブラウザの <code>localStorage</code> に保存されます。</p>
-    </footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="penalty" class="penalty" aria-hidden="true">
+    <img id="penaltyImg" alt="penalty" />
+  </div>
 
   <script>
-    // ====== 原文リスト ======
+    const PENALTY_IMAGES = [
+      "images/p1.png",
+      "images/p2.png",
+      "images/p3.png",
+      "images/p4.png",
+      "images/p5.png",
+      "images/p6.png",
+      "images/p7.png",
+    ];
+
     const RAW_LINES = [
-      "ウラン",
-      "プルトニウム",
-      "硝酸",
-      "バッテリー",
-      "アセトン",
-      "マッチ",
-      "ニトログリセリン",
-      "プレガバリン",
-      "君は生きてる。",
-      "この世界が間違っている。",
-      "拝啓75mg",
-      "私は愛されている",
-      "拝啓脳科学者",
-      "死ね",
-      "愛",
-      "深い傷に至る不快",
-      "思いは重い",
-      "これは報い、愉快犯じゃない",
-      "今日という日の再放送を",
-      "明日も明後日も明明後日も",
-      "数日後も、数週間後も、数ヵ月後も",
-      "ずっと、ずっと、ずっと、",
-      "永遠に、永遠に、永遠に、",
-      "繰り返さないための",
-      "目を覆う前髪と、",
-      "中央にある鼻を含めた",
-      "一人称視点のドキュメンタリー番組の",
-      "最終回",
-      "これから始まる新番組は、なんてタイトルにしたい？",
-      "…なんだ、それ",
-      "そのタイトルは大分子供じみていないか？",
-      "NOMALEND「新番組」"
+      "ウラン", "プルトニウム", "硝酸", "バッテリー", "アセトン", "マッチ", "ニトログリセリン", "プレガバリン", "君は生きてる。", "この世界が間違っている。", "拝啓75mg", "私は愛されている", "拝啓脳科学者", "死ね", "愛", "深い傷に至る不快", "思いは重い", "これは報い、愉快犯じゃない", "今日という日の再放送を", "明日も明後日も明明後日も", "数日後も、数週間後も、数ヵ月後も", "ずっと、ずっと、ずっと、", "永遠に、永遠に、永遠に、", "繰り返さないための", "目を覆う前髪と、", "中央にある鼻を含めた", "一人称視点のドキュメンタリー番組の", "最終回", "これから始まる新番組は、なんてタイトルにしたい？", "…なんだ、それ", "そのタイトルは大分子供じみていないか？", "NOMALEND「新番組」"
     ];
 
-    // 強い語句を伏せるルール
-    const SAFE_REPLACERS = [
-      [/死ね/g, "＊＊"],
-    ];
+    const elCurrent=document.getElementById('current');
+    const elAnswer=document.getElementById('answer');
+    const chipScore=document.getElementById('chipScore');
+    const chipStreak=document.getElementById('chipStreak');
+    const chipBest=document.getElementById('chipBest');
+    const toastEl=document.getElementById('toast');
+    const penaltyEl=document.getElementById('penalty');
+    const penaltyImg=document.getElementById('penaltyImg');
 
-    const qs = (s)=>document.querySelector(s);
-    const qsid = (id)=>document.getElementById(id);
-
-    const elCurrent = qsid('current');
-    const elAnswer  = qsid('answer');
-    const elLog     = qsid('log');
-    const elSafe    = qsid('safeMode');
-    const elRandom  = qsid('randomStart');
-    const chipScore = qsid('chipScore');
-    const chipStreak= qsid('chipStreak');
-    const chipBest  = qsid('chipBest');
-    const toastEl   = qsid('toast');
-
-    const btnStart  = qsid('btnStart');
-    const btnReset  = qsid('btnReset');
-    const btnCheck  = qsid('btnCheck');
-    const btnReveal = qsid('btnReveal');
-    const btnSkip   = qsid('btnSkip');
-    const btnShuffle= qsid('btnShuffle');
-
-    let order = [...RAW_LINES.keys()];
-    let idx = 0; // 現在の行 index（次の行は idx+1）
-    let score = 0; let streak = 0; let best = Number(localStorage.getItem('yamiko-best')||0);
-
-    function applySafe(s){
-      if(!elSafe.checked) return s;
-      return SAFE_REPLACERS.reduce((t,[re,rep])=>t.replace(re,rep), s);
-    }
+    let score=0,streak=0,best=Number(localStorage.getItem('yamiko-best')||0);
+    let index=0;
 
     function showToast(text){
-      toastEl.textContent = text; toastEl.classList.add('show');
-      setTimeout(()=>toastEl.classList.remove('show'), 1300);
+      toastEl.textContent=text;
+      toastEl.classList.add('show');
+      setTimeout(()=>toastEl.classList.remove('show'),1300);
+    }
+
+    function showPenaltyImage(){
+      const imgSrc=PENALTY_IMAGES[Math.floor(Math.random()*PENALTY_IMAGES.length)];
+      penaltyImg.src=imgSrc;
+      penaltyEl.classList.add('show');
+      setTimeout(()=>penaltyEl.classList.remove('show'),2000);
     }
 
     function updateChips(){
-      chipScore.textContent = `score: ${score}`;
-      chipStreak.textContent= `streak: ${streak}`;
-      chipBest.textContent  = `best: ${best}`;
+      chipScore.textContent=`score: ${score}`;
+      chipStreak.textContent=`streak: ${streak}`;
+      chipBest.textContent=`best: ${best}`;
     }
 
-    function setCurrent(i){
-      idx = i;
-      const line = applySafe(RAW_LINES[order[idx]]);
-      elCurrent.textContent = line;
-      elAnswer.value = '';
-      elAnswer.focus();
-    }
-
-    function next(){
-      if(idx < order.length - 2){
-        setCurrent(idx+1);
-      } else {
-        finish();
-      }
-    }
-
-    function shuffle(){
-      for(let i=order.length-1;i>0;i--){
-        const j = Math.floor(Math.random()*(i+1));
-        [order[i],order[j]] = [order[j],order[i]];
-      }
-    }
-
-    function reveal(){
-      const correct = applySafe(RAW_LINES[order[idx+1]] ?? '（終わり）');
-      log(`👉 正解: <span class="muted">${escapeHtml(correct)}</span>`);
-      next();
+    function setCurrent(){
+      elCurrent.textContent=RAW_LINES[index]||'最終回';
     }
 
     function check(){
-      const correctRaw = RAW_LINES[order[idx+1]];
-      if(correctRaw == null){ finish(); return; }
-
-      const user = normalize(elAnswer.value);
-      const target = normalize(correctRaw);
-
-      if(user && user === target){
-        score++; streak++; updateChips();
+      const answer=elAnswer.value.trim();
+      const correct=RAW_LINES[index+1];
+      if(answer===correct){
         showToast('✅ 君は生きてる。');
-        log(`<span style="color:var(--ok)">正解</span>：${escapeHtml(applySafe(correctRaw))}`);
-        next();
-      } else {
-        streak = 0; updateChips();
+        score++;streak++;index++;updateChips();setCurrent();elAnswer.value='';
+      }else{
         showToast('❌ これは報い、愉快犯じゃない。');
-        log(`<span style="color:var(--bad)">不正解</span>：あなた「${escapeHtml(elAnswer.value)}」 / 正解「${escapeHtml(applySafe(correctRaw))}」`);
-        // そのまま再挑戦可
+        streak=0;index++;setCurrent();elAnswer.value='';showPenaltyImage();
       }
+      if(score>best){best=score;localStorage.setItem('yamiko-best',best);}
     }
 
-    function finish(){
-      elCurrent.innerHTML = '最終回 <span class="muted small">（おつかれ）</span>';
-      elAnswer.value = '';
-      if(score > best){ best = score; localStorage.setItem('yamiko-best', String(best)); }
-      updateChips();
-      showToast(`結果: ${score} / ${RAW_LINES.length-1}`);
-    }
+    function startGame(){score=0;streak=0;index=0;updateChips();setCurrent();showToast('スタート');}
+    function resetGame(){score=0;streak=0;index=0;updateChips();elCurrent.textContent='（スタートを押してね）';elAnswer.value='';showToast('リセット');}
 
-    function log(html){
-      const item = document.createElement('div');
-      item.innerHTML = html;
-      elLog.prepend(item);
-    }
+    document.getElementById('btnStart').addEventListener('click',startGame);
+    document.getElementById('btnReset').addEventListener('click',resetGame);
+    document.getElementById('btnCheck').addEventListener('click',check);
+    document.getElementById('btnReveal').addEventListener('click',()=>{showToast('👉 '+(RAW_LINES[index+1]||'最終回'));});
+    document.getElementById('btnSkip').addEventListener('click',()=>{index++;setCurrent();showToast('スキップ');});
+    elAnswer.addEventListener('keydown',e=>{if(e.key==='Enter')check();});
 
-    function startGame(){
-      score = 0; streak = 0; updateChips();
-      order = [...RAW_LINES.keys()];
-// ↓ この2行を削除またはコメントアウト
-// shuffle(); 
-// if (elRandom.checked) { ... }
-
-setCurrent(0);
-
-      elLog.innerHTML = '';
-      showToast('スタート');
-    }
-
-    function resetGame(){
-      score = 0; streak = 0; updateChips(); elLog.innerHTML='';
-      order = [...RAW_LINES.keys()]; idx = 0; elCurrent.textContent = '（スタートを押してね）'; elAnswer.value='';
-      showToast('リセット');
-    }
-
-    function normalize(s){
-      return s.replace(/\s+/g,' ').trim();
-    }
-
-    function escapeHtml(s){
-      return s.replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-    }
-
-    // === events ===
-    btnStart.addEventListener('click', startGame);
-    btnReset.addEventListener('click', resetGame);
-    btnShuffle.addEventListener('click', ()=>{ shuffle(); setCurrent(0); showToast('シャッフル'); });
-    btnReveal.addEventListener('click', reveal);
-    btnSkip.addEventListener('click', ()=>{ log('<span class="muted">⏭ スキップ</span>'); next(); });
-    btnCheck.addEventListener('click', check);
-    elAnswer.addEventListener('keydown', (e)=>{ if(e.key==='Enter') check(); });
-
-    // 初期
     updateChips();
-    chipBest.textContent = `best: ${best}`;
   </script>
 </body>
 </html>
